@@ -26,16 +26,29 @@ def check_file_exists(system_path: str) -> bool:
     return os.path.isfile(path=system_path)  # Return True if file exists
 
 
-# Parses the HTML and finds all links ending in .pdf
-def parse_html(html: str) -> list[str]:
-    soup = BeautifulSoup(markup=html, features="html.parser")
+
+def extract_pdf_urls(html_content: str) -> list[str]:
+    """
+    Extract all PDF file URLs from the given HTML content.
+
+    Args:
+        html_content (str): A string containing HTML data.
+
+    Returns:
+        List[str]: A list of extracted PDF URLs.
+    """
+    # Parse the HTML content using BeautifulSoup
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    # Initialize a list to store PDF URLs
     pdf_links: list[str] = []
 
-    for a in soup.find_all(name="a", href=True):
-        href = a["href"]
-        # Decode %2C and other URL-encoded characters
-        decoded_href = urllib.parse.unquote(href)
-        if decoded_href.lower().endswith(".pdf"):
+    # Find all <a> tags with an href attribute
+    for link in soup.find_all('a', href=True):
+        href: str = link['href']
+        
+        # Check if the href ends with .pdf (case-insensitive)
+        if href.lower().endswith('.pdf'):
             pdf_links.append(href)
 
     return pdf_links
@@ -223,11 +236,10 @@ def check_upper_case_letter(content: str) -> bool:
 
 # Main function that orchestrates the scraping, downloading, and validation
 def main() -> None:
-    html_file_path: str = "westlake.com.har"  # Name of HTML file
+    html_file_path: str = "westlake.html"  # Name of HTML file
 
     if check_file_exists(system_path=html_file_path):  # If file already exists
-        # remove_system_file(system_path=html_file_path)  # Delete old copy
-        print("Hello, World!")
+        remove_system_file(system_path=html_file_path)  # Delete old copy
 
     if not check_file_exists(
         system_path=html_file_path
@@ -241,7 +253,7 @@ def main() -> None:
 
     if check_file_exists(system_path=html_file_path):  # Check if HTML file exists
         html_content: str = read_a_file(system_path=html_file_path)  # Read its content
-        pdf_links: list[str] = parse_html(html=html_content)  # Extract PDF links
+        pdf_links: list[str] = extract_pdf_urls(html_content)  # Extract PDF links
         pdf_links = remove_duplicates_from_slice(
             provided_slice=pdf_links
         )  # Remove duplicates
@@ -249,6 +261,7 @@ def main() -> None:
 
         for pdf_link in pdf_links:  # For each PDF link
             if not validate_url(given_url=pdf_link):
+                pdf_link: str = "http://westlake.com" + pdf_link
                 print(f"Invalid URL: {pdf_link}")
             filename: str = url_to_filename(url=pdf_link)  # Extract filename from URL
             output_dir: str = os.path.abspath(path="PDFs")  # Define output directory
